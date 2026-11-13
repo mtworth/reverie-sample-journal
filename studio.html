@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en" class="studio">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Reverie</title>
+<link rel="icon" href="data:," />
+<link rel="stylesheet" href="static/style.css" />
+<link rel="stylesheet" href="static/reverie.css" />
+<link rel="stylesheet" href="static/demo.css" />
+</head>
+<body class="studio rv">
+  <header class="rv-head">
+    <a href="index.html" class="rv-word">reverie</a>
+    <nav class="rv-nav">
+      <a href="#today" data-page="today">today</a>
+      <a href="#journal" data-page="journal">journal</a>
+      <a href="#library" data-page="library">library</a>
+    </nav>
+    <span class="rv-demo-tag">sample journal</span>
+  </header>
+
+  <main class="rv-page" id="page"></main>
+  <footer class="rv-demo-note">
+    A sample journal: openings of classical pieces, each played by different pianists, stand in for one
+    musician's sketches. Lines, keys and maps are worked out in your browser from the notes.<br />
+    Music: transcriptions from <a href="https://github.com/BetsyTang/ATEPP">ATEPP</a> (Zhang et al., 2022; CC BY 4.0).
+    Piano: Salamander Grand Piano by Alexander Holm (CC BY 3.0), via Tone.js.
+  </footer>
+
+  <div class="rv-gate hidden" id="gate"><p>tap anywhere to begin listening</p></div>
+  <audio id="player" preload="metadata"></audio>
+
+  <script src="https://cdn.jsdelivr.net/npm/@tonejs/midi@2.0.28/build/Midi.js"></script>
+  <script src="static/facts.js"></script>
+  <script src="static/views.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+  <script src="static/demo.js"></script>
+  <script src="static/reverie.js"></script>
+</body>
+</html>
