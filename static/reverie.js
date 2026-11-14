@@ -4,7 +4,7 @@
 
 const $ = (id) => document.getElementById(id);
 const page = $("page");
-const player = window.DemoPlayer || $("player"); // the sample journal plays notes, not recordings
+const player = window.DemoPlayer || window.LocalPlayer || $("player"); // sample journal: notes; in-browser: stored audio
 const listenBtn = $("listen");
 const listenWord = $("listenWord");
 const gate = $("gate");
@@ -97,10 +97,7 @@ function route() {
   return { name: ["today", "journal", "library", "idea"].includes(name) ? name : "today", arg };
 }
 
-window.addEventListener("hashchange", () => {
-  render(true);
-  window.scrollTo(0, 0);
-});
+window.addEventListener("hashchange", () => render(true));
 
 function render(force = false) {
   if (document.activeElement?.isContentEditable) return; // don't disturb a rename
@@ -112,11 +109,35 @@ function render(force = false) {
     r.name === "journal" ? journalPage() : r.name === "library" ? libraryPage() : r.name === "idea" ? ideaPage(r.arg) : todayPage();
   if (!force && html === store.lastHtml) return; // nothing changed: leave the page still
   store.lastHtml = html;
-  page.innerHTML = html;
-  afterRender(r);
-  markPlaying();
-  revealNewest();
+
+  // A different page (or a different way of seeing the library) fades: out quickly, then in
+  // slowly. Updates to the same page — a new line arriving, a map layout gliding — don't.
+  const where = [r.name, r.arg || "", r.name === "library" ? `${getPref("view", "list", SEE_AS)}:${getPref("arrange", "recent", ARRANGEMENTS)}` : ""].join("/");
+  const moved = store.where !== undefined && where !== store.where;
+  store.where = where;
+  const swap = () => {
+    page.innerHTML = html;
+    if (moved) window.scrollTo(0, 0);
+    page.classList.remove("rv-leave", "rv-enter");
+    if (moved || !store.shown) {
+      void page.offsetWidth; // restart the animation
+      page.classList.add("rv-enter");
+      // Off again once everything has settled, so later quiet refreshes don't replay it.
+      clearTimeout(store.enterTimer);
+      store.enterTimer = setTimeout(() => page.classList.remove("rv-enter"), 1400);
+    }
+    store.shown = true;
+    afterRender(r);
+    markPlaying();
+    revealNewest();
+  };
+  clearTimeout(store.fadeTimer);
+  if (moved && !REDUCED_MOTION && page.childElementCount) {
+    page.classList.add("rv-leave");
+    store.fadeTimer = setTimeout(swap, 170);
+  } else swap();
 }
+const REDUCED_MOTION = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 
 // ---------- Today ----------
 
@@ -372,7 +393,17 @@ function ideaPage(id) {
       <h2>heard</h2>
       <ol class="rv-heard">${heard}</ol>
       ${seeAlso ? `<h2>see also</h2><p class="rv-seealso">${seeAlso}</p>` : ""}
+      ${closeTo(m)}
     </article>`;
+}
+
+// In-browser version: what this idea sounds close to, each with a one-tap "same idea".
+function closeTo(m) {
+  const list = (m.closest || []).filter((c) => store.motifs.has(c.motif_id));
+  if (!list.length) return "";
+  return `<h2>sounds close to</h2><ul class="rv-close">${list
+    .map((c) => `<li><a href="#idea/${c.motif_id}">${esc(c.name)}</a> <button class="rv-same" data-merge="${m.id},${c.motif_id}">same idea</button></li>`)
+    .join("")}</ul>`;
 }
 
 function afterRender(r) {
@@ -428,6 +459,16 @@ document.addEventListener("click", async (e) => {
     e.preventDefault();
     await fetch(`/api/entries/${retry.dataset.retry}/retry`, { method: "POST" });
     return refresh();
+  }
+  const merge = e.target.closest("[data-merge]");
+  if (merge) {
+    const [from, into] = merge.dataset.merge.split(",");
+    merge.textContent = "joining…";
+    const res = await fetch(`/api/motifs/${from}/merge`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ into }) });
+    await refreshLibrary();
+    await ensureFacts();
+    if (res.ok) location.hash = `#idea/${into}`;
+    return render(true);
   }
   const notThis = e.target.closest("[data-notthis]");
   if (notThis) {
@@ -548,6 +589,7 @@ const LISTEN_WORDS = {
   off: "listen",
   starting: "listening",
   listening: "listening",
+  hearing: "hearing you",
   paused: "paused",
   blocked: "microphone off",
   "needs-gesture": "listen",
@@ -559,10 +601,11 @@ Capture.on("state", (s) => {
   gate.classList.toggle("hidden", s !== "needs-gesture");
 });
 Capture.on("burst", () => refresh());
+window.addEventListener("reverie:changed", () => refresh()); // the in-browser version, when a sketch arrives or is done
 Capture.ignorePlayback(player);
 
 // (The sample journal has no listen button or gate.)
-listenBtn?.addEventListener("click", () => (Capture.state === "listening" ? Capture.pause() : Capture.start()));
+listenBtn?.addEventListener("click", () => (["listening", "hearing"].includes(Capture.state) ? Capture.pause() : Capture.start()));
 gate?.addEventListener("click", () => {
   gate.classList.add("hidden");
   Capture.start();
@@ -636,4 +679,4 @@ function esc(text) {
 // ============================================================================
 
 refresh();
-Capture.start();
+if (!window.DEFER_LISTENING) Capture.start(); // the in-browser version starts after its loading screen

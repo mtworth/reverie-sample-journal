@@ -15,6 +15,7 @@ window.Views = (() => {
 
   const notesCache = new Map();
   function entryNotes(id) {
+    if (window.LocalNotes) return window.LocalNotes(id); // the in-browser version stores notes directly
     if (!notesCache.has(id)) {
       notesCache.set(
         id,
