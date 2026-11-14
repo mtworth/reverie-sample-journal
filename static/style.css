@@ -657,3 +657,10 @@ body.studio {
   .lib-controls { flex-direction: column; align-items: flex-start; }
   .lib-options .opt-label { margin-left: 0; }
 }
+
+/* ---------- the Drift mark (2026-11-13): one pencil line that wanders and trails off to a dot ---------- */
+
+.drift-mark { display: block; width: 170px; height: auto; margin: 0 0 0.6rem -8px; overflow: visible; }
+/* Static: the draw-in animation kept rendering badly (2026-11-13), and the still mark is enough. */
+.drift-mark path { fill: none; stroke: var(--ink); stroke-width: 3.2; stroke-linecap: round; stroke-linejoin: round; }
+.drift-mark circle { fill: var(--accent); }

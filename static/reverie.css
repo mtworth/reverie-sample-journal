@@ -15,6 +15,9 @@ body.rv { background: var(--bg); color: var(--ink); }
   font-family: var(--serif);
 }
 .rv-word {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
   font-style: italic;
   font-size: 1.3rem;
   color: var(--ink);
@@ -345,20 +348,49 @@ body.rv { background: var(--bg); color: var(--ink); }
 .rv-debug { position: fixed; right: 12px; bottom: 12px; background: #fff; border: 1px solid var(--rule); border-radius: 6px;
   padding: 0.5rem 0.7rem; font: 12px/1.5 ui-monospace, Menlo, monospace; color: var(--ink-muted); white-space: pre; z-index: 10; }
 
-/* ---------- in-browser version: loading screen ---------- */
-.rv-loading {
-  position: fixed; inset: 0; background: rgba(255, 255, 255, 0.97); z-index: 20;
-  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.9rem;
-  font-family: var(--serif); text-align: center; padding: 0 1.5rem;
+/* ---------- in-browser version: the way in ---------- */
+/* The dictionary entry, over the app. Begin dissolves it into Today. */
+.rv-threshold {
+  position: fixed; inset: 0; z-index: 20; overflow-y: auto; background: var(--bg);
+  display: flex; align-items: center; justify-content: center; padding: 2rem 1.5rem;
+  transition: opacity 1s ease;
 }
-.rv-loading.ready { cursor: pointer; }
-.rv-loading.gone { opacity: 0; pointer-events: none; transition: opacity 0.9s ease; }
-.rv-loading-word { font-style: italic; font-size: 1.5rem; color: var(--ink); margin: 0; }
-.rv-loading.ready .rv-loading-word { color: var(--ink-muted); }
-.rv-loading.ready .rv-loading-bar { visibility: hidden; }
-.rv-loading-bar { width: min(280px, 70vw); height: 2px; background: var(--rule); border-radius: 1px; overflow: hidden; }
-.rv-loading-bar div { height: 100%; width: 0; background: var(--ink-muted); transition: width 0.2s; }
-.rv-loading-note { font-style: italic; font-size: 0.9rem; color: var(--ink-faint); margin: 0; min-height: 1.3em; }
+.rv-threshold.gone { opacity: 0; pointer-events: none; }
+.rv-threshold .entry { margin: auto 0; }
+.rv-threshold .enter-link { background: none; border-width: 0 0 1px; cursor: pointer; padding: 0 0 0.15rem; }
+.rv-threshold-note {
+  font-family: var(--serif); font-style: italic; color: var(--ink-faint); font-size: 0.95rem;
+  line-height: 1.55; margin: 1.4rem 0 0;
+}
+.rv-threshold-note a { color: var(--ink-muted); }
+/* Underneath, the app waits faded out, and comes up as the entry dissolves. */
+body.rv-at-threshold { overflow: hidden; }
+body.rv-at-threshold .rv-head, body.rv-at-threshold .rv-page, body.rv-at-threshold .rv-local-note { opacity: 0; transition: none; }
+body.rv-entering .rv-head, body.rv-entering .rv-page, body.rv-entering .rv-local-note { transition: opacity 1.2s ease 0.35s; }
+
+/* ---------- what's happening: the level meter, and the background note ---------- */
+.rv-meter {
+  position: relative; display: inline-block; width: 44px; height: 3px; margin-left: 0.15rem;
+  border-radius: 2px; background: var(--rule); align-self: center; opacity: 0; transition: opacity 0.6s ease;
+}
+.rv-meter.on { opacity: 1; }
+.rv-meter-fill {
+  position: absolute; inset: 0; border-radius: 2px; background: var(--ink-faint);
+  transform-origin: left center; transform: scaleX(0); transition: transform 0.12s linear, background-color 0.3s ease;
+}
+.rv-meter.over .rv-meter-fill { background: var(--accent); }
+.rv-meter-tick { position: absolute; top: -2px; width: 1px; height: 7px; background: var(--ink-muted); left: 50%; transition: left 0.6s ease; }
+/* Under the listen control, out of the header's flow, so its words coming and going never move anything. */
+.rv-head { position: relative; }
+.rv-model-note {
+  position: absolute; right: 1.5rem; top: calc(100% + 0.15rem); white-space: nowrap;
+  font-family: var(--serif); font-style: italic; font-size: 0.85rem; color: var(--ink-faint); transition: opacity 0.25s ease;
+}
+/* "tuning in": a hairline under the words fills as the models load. */
+.rv-model-note.loading {
+  background: linear-gradient(var(--ink-faint), var(--ink-faint)) no-repeat left bottom / calc(var(--progress, 0) * 100%) 1px;
+  padding-bottom: 2px; transition: opacity 0.25s ease, background-size 0.8s ease;
+}
 
 /* ---------- fades: lighter, slower, quieter ---------- */
 
@@ -394,5 +426,30 @@ body.rv { background: var(--bg); color: var(--ink); }
 
 @media (prefers-reduced-motion: reduce) {
   .rv-page, .rv-page.rv-enter, .rv-page.rv-enter .rv-entry > *, .rv-line.arrive, .rv-wave, .rv-roll, .rv-map,
-  .rv-map-tip, .rv-gate { animation: none !important; transition: none !important; }
+  .rv-map-tip, .rv-gate, .rv-threshold,
+  body.rv-entering .rv-head, body.rv-entering .rv-page, body.rv-entering .rv-local-note, .rv-meter-fill { animation: none !important; transition: none !important; }
 }
+
+/* ---------- the live piano roll of a sketch being played ---------- */
+.rv-live { max-width: 420px; margin: 0.35rem 0 0.1rem; min-height: 4px; }
+.rv-live .rv-roll { animation: none; opacity: 0.75; }
+.rv-live .rv-roll-note.melody { fill: var(--ink-muted); }
+.rv-roll-sketch { fill: none; stroke: var(--ink-faint); stroke-width: 1.4; stroke-linecap: round; opacity: 0.8; vector-effect: non-scaling-stroke; }
+
+/* The Drift mark beside the wordmark: at 72px with a ~1.3px line the loop reads as a loop (at
+   30px with a heavier line it read as a stray letter "e"). It hangs in the word's left padding, so
+   the word keeps its text baseline and lines up with the nav. */
+.rv-word { position: relative; padding-left: 80px; }
+.rv-mark { position: absolute; left: 0; top: 50%; transform: translateY(-58%); width: 72px; height: 41px; overflow: visible; }
+.rv-mark path { fill: none; stroke: var(--ink); stroke-width: 5.1; stroke-linecap: round; stroke-linejoin: round; }
+.rv-mark circle { fill: var(--accent); }
+
+/* ---------- about ---------- */
+.rv-about-page p, .rv-about-page li { font-size: 1.08rem; line-height: 1.65; color: var(--ink); max-width: 34rem; }
+.rv-about-page p { margin: 0 0 1rem; }
+.rv-epigraph { margin: 0.6rem 0 1.8rem; padding: 0; font-style: italic; font-size: 1.15rem; line-height: 1.5; color: var(--ink-muted); max-width: 30rem; }
+.rv-epigraph cite { display: block; margin-top: 0.3rem; font-size: 0.9rem; color: var(--ink-faint); }
+.rv-epigraph cite::before { content: "— "; }
+.rv-credits { padding-left: 1.1rem; margin: 0 0 1.4rem; }
+.rv-credits li { font-size: 0.98rem; color: var(--ink-muted); margin-bottom: 0.4rem; }
+.rv-about-back a, .rv-local-note a { color: var(--ink-muted); }
